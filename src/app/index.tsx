@@ -1,98 +1,54 @@
-import * as Device from 'expo-device';
-import { Platform, StyleSheet } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { useEffect, useState } from 'react';
+import { ScrollView, Text, View } from 'react-native';
+import { supabase } from '../lib/supabase';
 
-import { AnimatedIcon } from '@/components/animated-icon';
-import { HintRow } from '@/components/hint-row';
-import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
-import { WebBadge } from '@/components/web-badge';
-import { BottomTabInset, MaxContentWidth, Spacing } from '@/constants/theme';
+export default function ConnectionTest() {
+  const [rows, setRows] = useState<string[] | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
-function getDevMenuHint() {
-  if (Platform.OS === 'web') {
-    return <ThemedText type="small">use browser devtools</ThemedText>;
-  }
-  if (Device.isDevice) {
-    return (
-      <ThemedText type="small">
-        shake device or press <ThemedText type="code">m</ThemedText> in terminal
-      </ThemedText>
-    );
-  }
-  const shortcut = Platform.OS === 'android' ? 'cmd+m (or ctrl+m)' : 'cmd+d';
+  useEffect(() => {
+    (async () => {
+      const [p, s, d] = await Promise.all([
+        supabase.from('programmes').select('id', { count: 'exact', head: true }),
+        supabase.from('sermons').select('id', { count: 'exact', head: true }),
+        supabase
+          .from('devotionals')
+          .select('title, publish_date')
+          .order('publish_date', { ascending: false })
+          .limit(1),
+      ]);
+      const err = p.error || s.error || d.error;
+      if (err) {
+        setError(err.message);
+        return;
+      }
+      setRows([
+        'Programmes visible: ' + p.count,
+        'Sermons visible: ' + s.count,
+        'Latest devotional: ' + (d.data?.[0]?.title ?? 'none'),
+      ]);
+    })();
+  }, []);
+
   return (
-    <ThemedText type="small">
-      press <ThemedText type="code">{shortcut}</ThemedText>
-    </ThemedText>
+    <ScrollView style={{ flex: 1, backgroundColor: '#1B2A4A' }}>
+      <View style={{ padding: 24, paddingTop: 80 }}>
+        <Text style={{ color: '#D4AF37', fontSize: 28, fontWeight: '700' }}>
+          TSC Official
+        </Text>
+        <Text style={{ color: '#F7F9FA', marginTop: 8 }}>Connection test</Text>
+        {error && (
+          <Text style={{ color: '#ff8080', marginTop: 24 }}>Error: {error}</Text>
+        )}
+        {!rows && !error && (
+          <Text style={{ color: '#F7F9FA', marginTop: 24 }}>Connecting...</Text>
+        )}
+        {rows?.map((r) => (
+          <Text key={r} style={{ color: '#F7F9FA', fontSize: 18, marginTop: 16 }}>
+            {r}
+          </Text>
+        ))}
+      </View>
+    </ScrollView>
   );
 }
-
-export default function HomeScreen() {
-  return (
-    <ThemedView style={styles.container}>
-      <SafeAreaView style={styles.safeArea}>
-        <ThemedView style={styles.heroSection}>
-          <AnimatedIcon />
-          <ThemedText type="title" style={styles.title}>
-            Welcome to&nbsp;Expo
-          </ThemedText>
-        </ThemedView>
-
-        <ThemedText type="code" style={styles.code}>
-          get started
-        </ThemedText>
-
-        <ThemedView type="backgroundElement" style={styles.stepContainer}>
-          <HintRow
-            title="Try editing"
-            hint={<ThemedText type="code">src/app/index.tsx</ThemedText>}
-          />
-          <HintRow title="Dev tools" hint={getDevMenuHint()} />
-          <HintRow
-            title="Fresh start"
-            hint={<ThemedText type="code">npm run reset-project</ThemedText>}
-          />
-        </ThemedView>
-
-        {Platform.OS === 'web' && <WebBadge />}
-      </SafeAreaView>
-    </ThemedView>
-  );
-}
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    justifyContent: 'center',
-    flexDirection: 'row',
-  },
-  safeArea: {
-    flex: 1,
-    paddingHorizontal: Spacing.four,
-    alignItems: 'center',
-    gap: Spacing.three,
-    paddingBottom: BottomTabInset + Spacing.three,
-    maxWidth: MaxContentWidth,
-  },
-  heroSection: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    flex: 1,
-    paddingHorizontal: Spacing.four,
-    gap: Spacing.four,
-  },
-  title: {
-    textAlign: 'center',
-  },
-  code: {
-    textTransform: 'uppercase',
-  },
-  stepContainer: {
-    gap: Spacing.three,
-    alignSelf: 'stretch',
-    paddingHorizontal: Spacing.three,
-    paddingVertical: Spacing.four,
-    borderRadius: Spacing.four,
-  },
-});
