@@ -5,7 +5,7 @@
 <meta name="theme-color" content="#1B2A4A">
 <title>TSC Official</title>
 <link rel="manifest" href="manifest.json">
-<link rel="icon" href="icon-192.png">
+<link rel="icon" href="tsc-icon-192.png">
 <style>
 :root{--navy:#1B2A4A;--navy2:#24365c;--gold:#D4AF37;--ala:#F7F9FA}
 *{box-sizing:border-box;margin:0}
@@ -22,12 +22,12 @@ main{padding:12px 16px;max-width:640px;margin:auto}
 img.ban{width:100%;border-radius:10px;margin-bottom:10px}
 audio{width:100%;margin-top:8px}
 nav{position:fixed;bottom:0;left:0;right:0;display:flex;background:#12203b;border-top:1px solid #3a4d78;padding-bottom:env(safe-area-inset-bottom)}
-nav button{flex:1;background:none;border:0;color:var(--ala);opacity:.65;padding:14px 4px;font-size:13px}
+nav button{flex:1;background:none;border:0;color:var(--ala);opacity:.65;padding:14px 2px;font-size:12px}
 nav button.on{color:var(--gold);opacity:1;font-weight:700}
 .q{border-left:3px solid var(--gold);padding-left:12px;font-style:italic;margin:10px 0}
 </style></head>
 <body>
-<header><h1>TSC Official</h1><p>Tabernacle of Solace Church</p></header>
+<header><img src="logo.png" alt="Tabernacle of Solace Church" style="height:92px;background:#fff;padding:6px;border-radius:14px"></header>
 <main id="app"></main>
 <nav id="nav"></nav>
 <script>
@@ -86,14 +86,22 @@ paras(s.description),
 safe(s.audio_url)&&h('audio',{controls:'',preload:'none',src:safe(s.audio_url)}),
 safe(s.video_url)&&h('a',{class:'btn',href:safe(s.video_url),target:'_blank',rel:'noopener'},'Watch video'));}));
 }).catch(function(e){fail(e,serm);});}
-var tabs=[['home','Home'],['devo','Devotional'],['prog','Programmes'],['serm','Sermons']];
+function about(){
+app.replaceChildren(
+h('div',{class:'card'},h('h2',{},'About TSC'),h('p',{},'Tabernacle of Solace Church is led by Apostle Oluwaseun Israel, Founder and Senior Pastor.')),
+h('div',{class:'card'},h('h3',{},'Our vision'),h('p',{},'A tabernacle of solace for the nations, where the broken find comfort, the bound find freedom and the weary find rest.')),
+h('div',{class:'card'},h('h3',{},'Our mission'),h('p',{},'To restore broken souls and renew faith in Jesus Christ through the preaching of the Word, prophetic ministry, deliverance and loving discipleship.')),
+h('div',{class:'card'},h('h3',{},'Meetings'),h('p',{},'Morning Altar: live daily at 5:30am on TSC Radio.'),h('p',{},'Mercy Encounter: every second Sunday of the month at 3pm, Dominion hall, No 76 MKO Abiola Way, behind Henrytee Motors, Ring Road, Ibadan.'),h('a',{class:'btn',href:RADIO,target:'_blank',rel:'noopener'},'TSC Radio')),
+h('div',{class:'card'},h('h3',{},'Contact'),h('p',{},'tabernacleofsolacechurch@gmail.com'),h('a',{class:'btn',href:WA,target:'_blank',rel:'noopener'},'WhatsApp us'),h('a',{class:'btn alt',href:'https://tabernacleofsolacechurch.github.io/',target:'_blank',rel:'noopener'},'Church website'))
+);}
+var tabs=[['home','Home'],['devo','Devotional'],['prog','Programmes'],['serm','Sermons'],['about','About']];
 var nav=document.getElementById('nav');
 tabs.forEach(function(t){nav.append(h('button',{id:'t-'+t[0],onclick:function(){go(t[0]);}},t[1]));});
 function go(r){location.hash='#'+r;}
 function route(){var p=(location.hash||'#home').slice(1).split('/');var r=p[0];
 tabs.forEach(function(t){document.getElementById('t-'+t[0]).className=t[0]===r?'on':'';});
 window.scrollTo(0,0);
-if(r==='devo'&&p[1])devoOne(p[1]);else if(r==='devo')devoList();else if(r==='prog')prog();else if(r==='serm')serm();else home();}
+if(r==='devo'&&p[1])devoOne(p[1]);else if(r==='devo')devoList();else if(r==='prog')prog();else if(r==='serm')serm();else if(r==='about')about();else home();}
 window.addEventListener('hashchange',route);route();
 if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js');
 </script></body></html>
