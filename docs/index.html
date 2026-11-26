@@ -128,6 +128,7 @@ app.replaceChildren(h('button',{class:'btn alt',onclick:function(){go('conn');}}
 function conn(){
 function c(t,d,r){return h('div',{class:'card',onclick:function(){go(r);}},h('h3',{},t),h('p',{class:'muted'},d));}
 app.replaceChildren(h('div',{class:'card'},h('h2',{},'More from TSC'),h('p',{class:'muted'},'We would love to hear from you.')),
+h('div',{class:'card',onclick:function(){window.open('https://tabernacleofsolacechurch.github.io/bot.html','_blank');}},h('h3',{},'Ask TSC AI'),h('p',{class:'muted'},'Chat with our digital assistant.')),
 c('TSC Radio','Programme times and listen live.','radio'),
 c('Audio Library','Listen to sermons and teachings.','aud'),
 c('Gallery','Photos from our services and events.','gal'),
