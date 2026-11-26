@@ -56,17 +56,17 @@ app.replaceChildren(h('p',{class:'muted'},'Loading...'));
 rest('profiles?select=roles,active&id=eq.'+S.user.id).then(function(p){p=p&&p[0];
 if(!p||!p.active||!p.roles||!p.roles.length){S=null;save();showLogin('This account does not have dashboard access.');return;}
 ME=p;loadAll();}).catch(function(e){S=null;save();showLogin(e.message);});}
-var T=[['prayer_requests','Prayer'],['members','Members'],['new_believer_requests','New believers'],['devotionals','Devotionals'],['programmes','Programmes'],['sermons','Sermons']];
+var T=[['prayer_requests','Prayer'],['members','Members'],['new_believer_requests','New believers'],['devotionals','Devotionals'],['programmes','Programmes'],['sermons','Sermons'],['testimonies','Testimonies'],['contact_enquiries','Enquiries'],['gallery_items','Gallery']];
 var OR={devotionals:'publish_date.desc',programmes:'start_at.desc',sermons:'preached_on.desc'};
-var ST={prayer_requests:['new','received','assigned','followed_up','closed'],members:['new_registration','contacted','active'],new_believer_requests:['new','contacted','followed_up','closed']};
-function isNew(r){return r.status==='new'||r.status==='new_registration';}
+var ST={testimonies:['pending','published','rejected'],contact_enquiries:['new','contacted','closed'],prayer_requests:['new','received','assigned','followed_up','closed'],members:['new_registration','contacted','active'],new_believer_requests:['new','contacted','followed_up','closed']};
+function isNew(r){return r.status==='new'||r.status==='new_registration'||r.status==='pending';}
 function loadAll(){Promise.all(T.map(function(t){return rest(t[0]+'?select=*&order='+(OR[t[0]]||'created_at.desc')+'&limit=300').then(function(r){D[t[0]]=r||[];D[t[0]+'_err']='';}).catch(function(e){D[t[0]]=[];D[t[0]+'_err']=e.message;});})).then(render);}
 var tabsEl=h('div',{}),listEl=h('div',{});
 function out(){S=null;save();showLogin();}
 function render(){app.replaceChildren(
 h('div',{class:'card'},h('p',{class:'muted'},'Signed in as '+S.user.email+' ('+ME.roles.join(', ')+')'),h('button',{class:'btn alt',onclick:out},'Sign out'),h('button',{class:'btn alt',onclick:loadAll},'Refresh')),tabsEl,listEl);drawTabs();drawList();}
 function drawTabs(){tabsEl.replaceChildren(h('div',{style:'display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px'},T.map(function(t){var n=(D[t[0]]||[]).filter(isNew).length;return h('button',{class:'btn'+(t[0]===cur?'':' alt'),onclick:function(){cur=t[0];flt='all';drawTabs();drawList();}},t[1]+(n?' ('+n+' new)':''));})));}
-function drawList(){if(CT.indexOf(cur)>-1){drawContent();return;}var rows=D[cur]||[];var all=ST[cur].slice();rows.forEach(function(r){if(r.status&&all.indexOf(r.status)<0)all.push(r.status);});
+function drawList(){if(cur==='testimonies'){drawTest();return;}if(CT.indexOf(cur)>-1){drawContent();return;}var rows=D[cur]||[];var all=ST[cur].slice();rows.forEach(function(r){if(r.status&&all.indexOf(r.status)<0)all.push(r.status);});
 var f=h('select',{class:'in'},[h('option',{value:'all'},'All statuses')].concat(all.map(function(s){return h('option',{value:s},s.replace(/_/g,' '));})));
 f.value=flt;f.addEventListener('change',function(){flt=f.value;drawList();});
 var shown=rows.filter(function(r){return flt==='all'||r.status===flt;});
@@ -82,7 +82,7 @@ var em=r.email||(isE?raw:'');var n=waNum(isE?(r.phone||''):raw);
 var body=[];
 if(tb==='prayer_requests'){body=[pr('Request',r.request),pr('Contact',[r.contact_method,r.contact_detail].filter(Boolean).join(' - ')),pr('May contact',r.may_contact===true?'Yes':(r.may_contact===false?'No':''))];}
 else if(tb==='members'){body=[pr('Phone',r.phone),pr('Email',r.email),pr('Area',r.area),pr('Faith',r.faith_status),pr('Departments',r.interest_departments||r.department),pr('Preferred contact',r.preferred_contact),pr('Message',r.message)];}
-else{body=[pr('Phone',r.phone),pr('Email',r.email),pr('Preferred contact',r.preferred_contact),pr('Needs',r.request_types),pr('Message',r.message)];}
+else if(tb==='contact_enquiries'){body=[pr('Subject',r.subject),pr('Phone',r.phone),pr('Email',r.email),pr('Message',r.message)];}else{body=[pr('Phone',r.phone),pr('Email',r.email),pr('Preferred contact',r.preferred_contact),pr('Needs',r.request_types),pr('Message',r.message)];}
 var sel=h('select',{class:'in'},opts.map(function(s){var o=h('option',{value:s},s.replace(/_/g,' '));if(s===r.status)o.selected=true;return o;}));
 var msg=h('span',{class:'muted'},'');
 sel.addEventListener('change',function(){msg.textContent='Saving...';patch(tb,r.id,{status:sel.value}).then(function(){r.status=sel.value;msg.textContent='Saved';drawTabs();}).catch(function(e){msg.textContent='Could not save: '+e.message;sel.value=r.status;});});
@@ -97,11 +97,24 @@ body,
 h('div',{},n&&h('a',{class:'btn',href:'https://wa.me/'+n,target:'_blank',rel:'noopener'},'WhatsApp'),n&&h('a',{class:'btn alt',href:'tel:+'+n},'Call'),em&&h('a',{class:'btn alt',href:'mailto:'+em},'Email')),
 h('label',{class:'fl'},'Status',sel),msg,
 nt&&h('label',{class:'fl'},'Notes',nt),nb,nm);}
-var CT=['devotionals','programmes','sermons'];
+function drawTest(){var rows=D.testimonies||[];
+var f=h('select',{class:'in'},[h('option',{value:'all'},'All')].concat(['pending','published','rejected'].map(function(x){return h('option',{value:x},x);})));
+f.value=flt;f.addEventListener('change',function(){flt=f.value;drawList();});
+var shown=rows.filter(function(r){return flt==='all'||r.status===flt;});
+var parts=[f];
+if(D.testimonies_err)parts.push(h('p',{class:'err'},D.testimonies_err));
+if(!shown.length)parts.push(h('p',{class:'muted'},'Nothing here yet.'));
+shown.forEach(function(r){var ta=h('textarea',{class:'in',rows:'6'});ta.value=r.published_text||r.testimony||'';
+var msg=h('span',{class:'muted'},'');
+function act(st){msg.textContent='Saving...';var o={status:st,reviewed_by:S.user.id};if(st==='published')o.published_text=ta.value.trim();patch('testimonies',r.id,o).then(function(){r.status=st;if(o.published_text)r.published_text=o.published_text;msg.textContent='Saved';drawTabs();}).catch(function(e){msg.textContent='Could not save: '+e.message;});}
+parts.push(h('div',{class:'card'},h('p',{class:'nm'},r.display_name||'Anonymous'),h('p',{class:'muted'},[r.attribution,r.status,r.created_at?fd(r.created_at):''].filter(Boolean).join(' - ')),h('p',{class:'muted'},'Original testimony:'),h('p',{style:'white-space:pre-wrap'},r.testimony||''),h('label',{class:'fl'},'Text to publish (you may edit it)',ta),h('button',{class:'btn',type:'button',onclick:function(){if(!ta.value.trim()){msg.textContent='Please add text to publish.';return;}act('published');}},'Publish'),h('button',{class:'btn alt',type:'button',onclick:function(){act('rejected');}},'Reject'),h('button',{class:'btn alt',type:'button',onclick:function(){act('pending');}},'Mark pending'),msg));});
+listEl.replaceChildren.apply(listEl,parts);}
+var CT=['devotionals','programmes','sermons','gallery_items'];
 var CS=['draft','published','archived'];
 var CF={
 devotionals:{one:'devotional',date:'publish_date',dt:'date',f:[['title','Title','text',1],['publish_date','Date','date',1],['scripture_ref','Scripture reference (for example Psalm 23:1)','text'],['scripture_text','Scripture text','area'],['message','Message','area',1],['application','Application','area'],['reflection','Reflection','area'],['prayer','Prayer','area'],['related_reading','Related reading','text'],['category','Category','text']]},
 programmes:{one:'programme',date:'start_at',dt:'dtl',f:[['title','Title','text',1],['description','Description','area'],['banner_url','Banner image link','text'],['start_at','Starts','dtl',1],['end_at','Ends','dtl'],['venue_name','Venue name','text'],['venue_address','Venue address','text'],['map_url','Map link','text'],['is_paid','This programme is paid','bool'],['price_text','Price','text'],['contact_info','Contact information','text'],['registration_required','Registration required','bool']]},
+gallery_items:{one:'photo',date:'event_date',dt:'date',f:[['image_url','Image link','text',1],['thumb_url','Small image link (optional)','text'],['caption','Caption','text'],['alt_text','Description for screen readers','text'],['category','Category','text'],['event_name','Event name','text'],['event_date','Event date','date'],['featured','Show as featured','bool']]},
 sermons:{one:'sermon',date:'preached_on',dt:'date',f:[['title','Title','text',1],['speaker','Speaker','text'],['preached_on','Date preached','date',1],['description','Description','area'],['scripture_refs','Scripture references (separate with commas)','list'],['category','Category','text'],['video_url','Video link','text'],['audio_url','Audio link','text'],['featured','Show as featured','bool']]}
 };
 function fd(d,t){if(!d)return '';return new Date(d).toLocaleString('en-GB',t==='date'?{day:'numeric',month:'short',year:'numeric'}:{day:'numeric',month:'short',year:'numeric',hour:'numeric',minute:'2-digit'});}
@@ -112,7 +125,7 @@ f.value=flt;f.addEventListener('change',function(){flt=f.value;drawList();});
 var shown=rows.filter(function(r){return flt==='all'||r.status===flt;});
 var parts=[h('button',{class:'btn',onclick:function(){edit(cur,null);}},'Add new '+c.one),f];
 if(D[cur+'_err'])parts.push(h('p',{class:'err'},D[cur+'_err']));
-if(shown.length){shown.forEach(function(r){parts.push(h('div',{class:'card'},h('p',{class:'nm'},r.title||'(untitled)'),h('p',{class:'muted'},[fd(r[c.date],c.dt),r.status].filter(Boolean).join(' - ')),h('button',{class:'btn alt',onclick:function(){edit(cur,r);}},'Edit')));});}
+if(shown.length){shown.forEach(function(r){parts.push(h('div',{class:'card'},h('p',{class:'nm'},r.title||r.caption||r.event_name||'(untitled)'),h('p',{class:'muted'},[fd(r[c.date],c.dt),r.status].filter(Boolean).join(' - ')),h('button',{class:'btn alt',onclick:function(){edit(cur,r);}},'Edit')));});}
 else parts.push(h('p',{class:'muted'},'Nothing here yet.'));
 listEl.replaceChildren.apply(listEl,parts);}
 function saveRow(tb,row,o){
@@ -140,7 +153,7 @@ if(ty==='dtl')o[k]=v?new Date(v).toISOString():null;
 else if(ty==='list')o[k]=v?v.split(',').map(function(z){return z.trim();}).filter(Boolean):null;
 else o[k]=v||null;}
 o.status=els.status.value;
-if(!row&&(tb==='devotionals'||tb==='programmes'))o.created_by=S.user.id;
+if(!row&&(tb==='devotionals'||tb==='programmes'||tb==='gallery_items'))o.created_by=S.user.id;
 sb.disabled=true;sb.textContent='Saving...';
 saveRow(tb,row,o).then(function(){loadAll();}).catch(function(e){sb.disabled=false;sb.textContent='Save';msg.textContent='Could not save: '+e.message;});});
 app.replaceChildren(h('button',{class:'btn alt',onclick:render},'Back'),h('div',{class:'card'},h('h2',{},(row?'Edit ':'Add new ')+c.one),kids,h('label',{class:'fl'},'Status',els.status),h('p',{class:'muted'},'Only published items appear in the public app. Drafts stay private.'),msg,sb));}
