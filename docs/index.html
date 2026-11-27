@@ -135,6 +135,7 @@ c('Audio Library','Listen to sermons and teachings.','aud'),
 c('Gallery','Photos from our services and events.','gal'),
 c('Testimonies','Read what God is doing, and share yours.','test'),
 c('Send a prayer request','Share your need with our prayer team.','pray'),
+c('Pastoral counselling','Speak with a pastor in confidence.','coun'),
 c('Become a member','Join the TSC family.','join'),
 c('I am new here','New believer or first-time guest? Let us walk with you.','nb'),
 c('Contact and invitations','Invite Apostle to speak, or send us a message.','ctc'),
@@ -289,14 +290,33 @@ h('div',{},h('button',{class:'btn alt',onclick:function(){if(n>1){pview=n-1;plan
 h('div',{class:'card',style:'margin-top:14px'},h('h3',{},'Your progress'),h('p',{},cnt+' of 365 days read'),h('p',{},'Current streak: '+s+(s===1?' day':' days')),h('p',{class:'muted'},'Your progress is saved on this phone.')),
 up.length>0&&h('div',{class:'card'},h('h3',{},'Coming up'),up),
 h('button',{class:'btn alt',onclick:function(){if(confirm('Start the plan again from Day 1? Your progress will be cleared.')){try{localStorage.removeItem('tscplan');}catch(e){}plan();}}},'Restart plan'));}
+function fCoun(){
+formPage('Pastoral counselling','Speak with a pastor in confidence. Only our pastoral team can see your request.',
+[h('p',{class:'err'},'If you or someone else is in immediate danger, or you are thinking of harming yourself, please call your local emergency number now (112 in Nigeria) or go to the nearest hospital. Do not wait for a reply from us.'),
+fld('Full name',inp('qn','text','')),
+fld('Phone number',inp('qp','tel','')),
+fld('Email (optional)',inp('qe','email','')),
+fld('How should we reach you?',sel('qc',['WhatsApp','Phone call','SMS','Email'])),
+fld('How would you like to meet?',sel('qm',['In person','Phone call','Video call','Any'])),
+fld('What would you like to talk about?',sel('qt',['Marriage and family','Grief and loss','Stress and anxiety','Addiction and bondage','Money and work','Faith and spiritual growth','Other'])),
+fld('Anything you would like us to know (optional)',txa('qg','You can share as much or as little as you like')),
+one('qk','I agree that TSC may keep and use these details so a pastor can contact me.')],
+function(){var f=v('qn'),p=v('qp'),e=v('qe'),m=v('qg');
+if(f.length<2||f.length>120)return{error:'Please enter your name.'};
+if(p.length<7||p.length>20)return{error:'Please enter a valid phone number.'};
+if(e&&!/^\S+@\S+\.\S+$/.test(e))return{error:'Please check your email address.'};
+if(m.length>3000)return{error:'Your message is too long.'};
+if(!ck('qk'))return{error:'Please tick the consent box to continue.'};
+return{body:{full_name:f,phone:p,email:e||null,preferred_contact:v('qc'),preferred_mode:v('qm'),topic:v('qt'),message:m||null,consent:true,status:'new'}};
+},'counselling_requests',null,'Thank you. A member of our pastoral team will contact you in confidence.');}
 var tabs=[['home','Home'],['devo','Devotional'],['prog','Programmes'],['serm','Sermons'],['conn','More']];
 var nav=document.getElementById('nav');
 tabs.forEach(function(t){nav.append(h('button',{id:'t-'+t[0],onclick:function(){go(t[0]);}},t[1]));});
 function go(r){location.hash='#'+r;}
 function route(){var p=(location.hash||'#home').slice(1).split('/');var r=p[0];
-var hl=['about','pray','join','nb','radio','aud','gal','test','tform','ctc','plan'].indexOf(r)>-1?'conn':r;tabs.forEach(function(t){document.getElementById('t-'+t[0]).className=t[0]===hl?'on':'';});
+var hl=['about','pray','join','nb','radio','aud','gal','test','tform','ctc','coun','plan'].indexOf(r)>-1?'conn':r;tabs.forEach(function(t){document.getElementById('t-'+t[0]).className=t[0]===hl?'on':'';});
 window.scrollTo(0,0);
-if(r==='devo'&&p[1])devoOne(p[1]);else if(r==='devo')devoList();else if(r==='prog')prog();else if(r==='serm')serm();else if(r==='about')about();else if(r==='conn')conn();else if(r==='pray')fPray();else if(r==='join')fJoin();else if(r==='nb')fNew();else if(r==='radio')radio();else if(r==='aud')aud();else if(r==='gal')gal();else if(r==='test')test();else if(r==='tform')fTest();else if(r==='ctc')fCtc();else if(r==='plan'){pview=0;plan();}else home();}
+if(r==='devo'&&p[1])devoOne(p[1]);else if(r==='devo')devoList();else if(r==='prog')prog();else if(r==='serm')serm();else if(r==='about')about();else if(r==='conn')conn();else if(r==='pray')fPray();else if(r==='join')fJoin();else if(r==='nb')fNew();else if(r==='radio')radio();else if(r==='aud')aud();else if(r==='gal')gal();else if(r==='test')test();else if(r==='tform')fTest();else if(r==='ctc')fCtc();else if(r==='plan'){pview=0;plan();}else if(r==='coun')fCoun();else home();}
 window.addEventListener('hashchange',route);route();
 if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js');
 </script></body></html>
