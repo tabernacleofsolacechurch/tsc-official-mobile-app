@@ -230,7 +230,7 @@ var parts=[back(),h('div',{class:'card'},h('h2',{},'Gallery'))];
 if(!g.length)parts.push(h('p',{class:'muted'},'Photos will appear here soon.'));
 g.forEach(function(x){parts.push(h('div',{class:'card'},h('a',{href:safe(x.image_url),target:'_blank',rel:'noopener'},h('img',{class:'ban',src:safe(x.thumb_url)||safe(x.image_url),alt:x.alt_text||x.caption||'',loading:'lazy'})),x.caption&&h('p',{},x.caption),(x.event_name||x.event_date)&&h('p',{class:'muted'},[x.event_name,x.event_date?dt(x.event_date):''].filter(Boolean).join(' - '))));});
 app.replaceChildren.apply(app,parts);}).catch(function(e){fail(e,gal);});}
-function test(){say('Loading...');apiO('testimonies','display_name,attribution,published_text','created_at.desc').then(function(rows){
+function test(){say('Loading...');apiO('app_published_testimonies','display_name,attribution,published_text','created_at.desc').then(function(rows){
 var t=rows.filter(function(x){return x.published_text;});
 var parts=[back(),h('div',{class:'card'},h('h2',{},'Testimonies'),h('p',{class:'muted'},'Give God the glory for what He has done.'),h('button',{class:'btn',onclick:function(){go('tform');}},'Share your testimony'))];
 if(!t.length)parts.push(h('p',{class:'muted'},'Testimonies will appear here after they are reviewed.'));

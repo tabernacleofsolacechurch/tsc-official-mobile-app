@@ -70,7 +70,7 @@ function drawList(){if(cur==='testimonies'){drawTest();return;}if(CT.indexOf(cur
 var f=h('select',{class:'in'},[h('option',{value:'all'},'All statuses')].concat(all.map(function(s){return h('option',{value:s},s.replace(/_/g,' '));})));
 f.value=flt;f.addEventListener('change',function(){flt=f.value;drawList();});
 var shown=rows.filter(function(r){return flt==='all'||r.status===flt;});
-listEl.replaceChildren(f,D[cur+'_err']&&h('p',{class:'err'},D[cur+'_err']),shown.length?shown.map(function(r){return card(cur,r,all);}):h('p',{class:'muted'},'Nothing here yet.'));}
+listEl.replaceChildren.apply(listEl,[f,D[cur+'_err']&&h('p',{class:'err'},D[cur+'_err'])].concat(shown.length?shown.map(function(r){return card(cur,r,all);}):[h('p',{class:'muted'},'Nothing here yet.')]).filter(Boolean));}
 function pr(l,v){if(Array.isArray(v))v=v.join(', ');return v?h('p',{},h('span',{class:'muted'},l+': '),String(v)):null;}
 function waNum(p){var d=String(p||'').replace(/\D/g,'');if(!d)return '';if(d.charAt(0)==='0')d='234'+d.slice(1);return d;}
 function patch(tb,id,o){return rest(tb+'?id=eq.'+encodeURIComponent(id),{method:'PATCH',headers:{Prefer:'return=representation'},body:JSON.stringify(o)}).then(function(res){if(!res||!res.length)throw new Error('You do not have permission to change this.');});}
