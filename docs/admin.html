@@ -114,7 +114,14 @@ function finRow(r){
 var msg=h('span',{class:'muted'},'');
 var vb=h('button',{class:'btn alt',type:'button'},r.verified?'Verified (tap to undo)':'Mark verified');
 vb.addEventListener('click',function(){var nv=!r.verified;msg.textContent='Saving...';patch('finance_records',r.id,{verified:nv,verified_by:nv?S.user.id:null,updated_at:new Date().toISOString()}).then(function(){r.verified=nv;vb.textContent=nv?'Verified (tap to undo)':'Mark verified';msg.textContent='Saved';}).catch(function(e){msg.textContent='Could not save: '+e.message;});});
-return h('div',{class:'card'},h('p',{class:'nm'},(r.type==='income'?'+ ':'- ')+fmt(r.amount,r.currency)),h('p',{class:'muted'},[fd(r.entry_date,'date'),r.category,r.type].filter(Boolean).join(' - ')),r.description&&h('p',{},r.description),r.payment_ref&&h('p',{class:'muted'},'Ref: '+r.payment_ref),h('button',{class:'btn alt',onclick:function(){finEdit(r);}},'Edit'),vb,msg);}
+return h('div',{class:'card'},h('p',{class:'nm'},(r.type==='income'?'+ ':'- ')+fmt(r.amount,r.currency)),h('p',{class:'muted'},[fd(r.entry_date,'date'),r.category,r.type].filter(Boolean).join(' - ')),r.description&&h('p',{},r.description),r.payment_ref&&h('p',{class:'muted'},'Ref: '+r.payment_ref),h('button',{class:'btn alt',onclick:function(){finEdit(r);}},'Edit'),vb,(ME&&ME.roles&&ME.roles.indexOf('super_admin')>-1)&&h('button',{class:'btn alt',type:'button',style:'color:#ff9a9a;border-color:#ff9a9a',onclick:function(){finDel(r,msg);}},'Delete'),msg);}
+function finDel(r,msg){
+if(!confirm('Delete this entry permanently?\n'+fmt(r.amount,r.currency)+' - '+(r.category||'')+' - '+String(r.entry_date).slice(0,10)+'\nThis cannot be undone.'))return;
+msg.textContent='Deleting...';
+rest('finance_records?id=eq.'+encodeURIComponent(r.id),{method:'DELETE',headers:{Prefer:'return=representation'}}).then(function(res){
+if(!res||!res.length)throw new Error('You do not have permission to delete this.');
+D.finance_records=(D.finance_records||[]).filter(function(x){return x.id!==r.id;});drawFin();
+}).catch(function(e){msg.textContent='Could not delete: '+e.message;});}
 function drawFin(){
 if(!FM)FM=new Date(new Date().getFullYear(),new Date().getMonth(),1);
 var key=fmKey(FM);
