@@ -30,7 +30,7 @@ main{padding:10px 16px;max-width:680px;margin:auto}
 var BASE='https://kniksxocjsuqghydipmg.supabase.co';
 var KEY='sb_publishable_d_CZpD5xT8TPeg10c07Jog_QoqJ_qan';
 var app=document.getElementById('app');
-var S=null,ME=null,D={},cur='prayer_requests',flt='all';
+var S=null,ME=null,D={},cur='overview',flt='all';
 try{S=JSON.parse(sessionStorage.getItem('tscs')||'null');}catch(e){}
 function save(){if(S)sessionStorage.setItem('tscs',JSON.stringify(S));else sessionStorage.removeItem('tscs');}
 function h(t,a){var e=document.createElement(t);a=a||{};for(var k in a){if(k==='class')e.className=a[k];else if(k.indexOf('on')===0)e.addEventListener(k.slice(2),a[k]);else e.setAttribute(k,a[k]);}
@@ -56,16 +56,16 @@ app.replaceChildren(h('p',{class:'muted'},'Loading...'));
 rest('profiles?select=roles,active&id=eq.'+S.user.id).then(function(p){p=p&&p[0];
 if(!p||!p.active||!p.roles||!p.roles.length){S=null;save();showLogin('This account does not have dashboard access.');return;}
 ME=p;loadAll();}).catch(function(e){S=null;save();showLogin(e.message);});}
-var T=[['prayer_requests','Prayer'],['members','Members'],['new_believer_requests','New believers'],['devotionals','Devotionals'],['programmes','Programmes'],['sermons','Sermons'],['testimonies','Testimonies'],['contact_enquiries','Enquiries'],['gallery_items','Gallery'],['counselling_requests','Counselling'],['team','Team']];
+var T=[['overview','Overview'],['prayer_requests','Prayer'],['members','Members'],['new_believer_requests','New believers'],['devotionals','Devotionals'],['programmes','Programmes'],['sermons','Sermons'],['testimonies','Testimonies'],['contact_enquiries','Enquiries'],['gallery_items','Gallery'],['counselling_requests','Counselling'],['team','Team']];
 var OR={devotionals:'publish_date.desc',programmes:'start_at.desc',sermons:'preached_on.desc'};
 var ST={counselling_requests:['new','assigned','scheduled','closed'],testimonies:['pending','published','rejected'],contact_enquiries:['new','contacted','closed'],prayer_requests:['new','received','assigned','followed_up','closed'],members:['new_registration','contacted','active'],new_believer_requests:['new','contacted','followed_up','closed']};
 function isNew(r){return r.status==='new'||r.status==='new_registration'||r.status==='pending';}
-function loadAll(){Promise.all(T.map(function(t){if(t[0]==='team')return Promise.resolve();return rest(t[0]+'?select=*&order='+(OR[t[0]]||'created_at.desc')+'&limit=300').then(function(r){D[t[0]]=r||[];D[t[0]+'_err']='';}).catch(function(e){D[t[0]]=[];D[t[0]+'_err']=e.message;});})).then(render);}
+function loadAll(){Promise.all(T.map(function(t){if(t[0]==='team'||t[0]==='overview')return Promise.resolve();return rest(t[0]+'?select=*&order='+(OR[t[0]]||'created_at.desc')+'&limit=300').then(function(r){D[t[0]]=r||[];D[t[0]+'_err']='';}).catch(function(e){D[t[0]]=[];D[t[0]+'_err']=e.message;});})).then(render);}
 var tabsEl=h('div',{}),listEl=h('div',{});
 function out(){S=null;save();showLogin();}
 function render(){if(!canSee(cur)){var v0=vis()[0];if(v0)cur=v0[0];}app.replaceChildren(
 h('div',{class:'card'},h('p',{class:'muted'},'Signed in as '+S.user.email+' ('+ME.roles.join(', ')+')'),h('button',{class:'btn alt',onclick:out},'Sign out'),h('button',{class:'btn alt',onclick:loadAll},'Refresh')),tabsEl,listEl);drawTabs();drawList();}
-var TV={prayer_requests:['pastoral_admin'],members:['pastoral_admin'],new_believer_requests:['pastoral_admin'],counselling_requests:['pastoral_admin'],contact_enquiries:['pastoral_admin','events_admin'],testimonies:['pastoral_admin','content_editor'],devotionals:['content_editor'],sermons:['content_editor'],programmes:['content_editor','events_admin'],gallery_items:['content_editor','events_admin'],team:[]};
+var TV={prayer_requests:['pastoral_admin'],members:['pastoral_admin'],new_believer_requests:['pastoral_admin'],counselling_requests:['pastoral_admin'],contact_enquiries:['pastoral_admin','events_admin'],testimonies:['pastoral_admin','content_editor'],devotionals:['content_editor'],sermons:['content_editor'],programmes:['content_editor','events_admin'],gallery_items:['content_editor','events_admin'],team:[],overview:['pastoral_admin','content_editor','events_admin','finance_admin']};
 function canSee(k){var r=(ME&&ME.roles)||[];if(r.indexOf('super_admin')>-1)return true;return (TV[k]||[]).some(function(x){return r.indexOf(x)>-1;});}
 function vis(){return T.filter(function(t){return canSee(t[0]);});}
 var RL=[['super_admin','Super admin (everything)'],['pastoral_admin','Pastoral: prayer, members, new believers, counselling'],['content_editor','Content: devotionals, sermons, gallery, testimonies'],['events_admin','Events: programmes, gallery, enquiries'],['finance_admin','Finance (coming soon)']];
@@ -95,8 +95,18 @@ if(TERR)parts.push(h('p',{class:'err'},TERR));
 parts.push(staffCard({active:true,roles:[]},true));
 TEAM.forEach(function(s){parts.push(staffCard(s,false));});
 listEl.replaceChildren.apply(listEl,parts);}
+function mcount(rows){var n=new Date(),y=n.getFullYear(),m=n.getMonth();return (rows||[]).filter(function(r){if(!r.created_at)return false;var d=new Date(r.created_at);return d.getFullYear()===y&&d.getMonth()===m;}).length;}
+function ovGo(k){cur=k;flt='all';drawTabs();drawList();}
+function ovCard(label,key,rows){var w=(rows||[]).filter(isNew).length;return h('div',{class:'card',onclick:function(){ovGo(key);}},h('h3',{},label),h('p',{class:'nm'},String((rows||[]).length)+' total'),h('p',{class:'muted'},w+' waiting - '+mcount(rows)+' this month'));}
+function drawOverview(){
+var parts=[h('div',{class:'card'},h('h2',{},'Overview'),h('p',{class:'muted'},'Tap a card to open it. Counts cover the latest 300 entries.'))];
+[['Prayer requests','prayer_requests'],['Members','members'],['New believers','new_believer_requests'],['Counselling','counselling_requests'],['Enquiries','contact_enquiries'],['Testimonies','testimonies']].forEach(function(d){if(canSee(d[1]))parts.push(ovCard(d[0],d[1],D[d[1]]));});
+function pub(k){return (D[k]||[]).filter(function(r){return r.status==='published';}).length;}
+function drf(k){return (D[k]||[]).filter(function(r){return r.status==='draft';}).length;}
+if(canSee('devotionals'))parts.push(h('div',{class:'card',onclick:function(){ovGo('devotionals');}},h('h3',{},'Content'),h('p',{},pub('devotionals')+' devotionals published, '+drf('devotionals')+' drafts'),h('p',{},pub('programmes')+' programmes published, '+drf('programmes')+' drafts'),h('p',{},pub('sermons')+' sermons published, '+drf('sermons')+' drafts')));
+listEl.replaceChildren.apply(listEl,parts);}
 function drawTabs(){tabsEl.replaceChildren(h('div',{style:'display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px'},vis().map(function(t){var n=(D[t[0]]||[]).filter(isNew).length;return h('button',{class:'btn'+(t[0]===cur?'':' alt'),onclick:function(){cur=t[0];flt='all';drawTabs();drawList();}},t[1]+(n?' ('+n+' new)':''));})));}
-function drawList(){if(cur==='team'){drawTeam();return;}if(cur==='testimonies'){drawTest();return;}if(CT.indexOf(cur)>-1){drawContent();return;}var rows=D[cur]||[];var all=ST[cur].slice();rows.forEach(function(r){if(r.status&&all.indexOf(r.status)<0)all.push(r.status);});
+function drawList(){if(cur==='overview'){drawOverview();return;}if(cur==='team'){drawTeam();return;}if(cur==='testimonies'){drawTest();return;}if(CT.indexOf(cur)>-1){drawContent();return;}var rows=D[cur]||[];var all=ST[cur].slice();rows.forEach(function(r){if(r.status&&all.indexOf(r.status)<0)all.push(r.status);});
 var f=h('select',{class:'in'},[h('option',{value:'all'},'All statuses')].concat(all.map(function(s){return h('option',{value:s},s.replace(/_/g,' '));})));
 f.value=flt;f.addEventListener('change',function(){flt=f.value;drawList();});
 var shown=rows.filter(function(r){return flt==='all'||r.status===flt;});
