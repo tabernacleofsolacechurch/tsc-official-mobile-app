@@ -56,8 +56,8 @@ app.replaceChildren(h('p',{class:'muted'},'Loading...'));
 rest('profiles?select=roles,active&id=eq.'+S.user.id).then(function(p){p=p&&p[0];
 if(!p||!p.active||!p.roles||!p.roles.length){S=null;save();showLogin('This account does not have dashboard access.');return;}
 ME=p;loadAll();}).catch(function(e){S=null;save();showLogin(e.message);});}
-var T=[['overview','Overview'],['prayer_requests','Prayer'],['members','Members'],['new_believer_requests','New believers'],['devotionals','Devotionals'],['programmes','Programmes'],['sermons','Sermons'],['testimonies','Testimonies'],['contact_enquiries','Enquiries'],['gallery_items','Gallery'],['counselling_requests','Counselling'],['team','Team']];
-var OR={devotionals:'publish_date.desc',programmes:'start_at.desc',sermons:'preached_on.desc'};
+var T=[['overview','Overview'],['prayer_requests','Prayer'],['members','Members'],['new_believer_requests','New believers'],['devotionals','Devotionals'],['programmes','Programmes'],['sermons','Sermons'],['testimonies','Testimonies'],['contact_enquiries','Enquiries'],['gallery_items','Gallery'],['counselling_requests','Counselling'],['finance_records','Finance'],['team','Team']];
+var OR={finance_records:'entry_date.desc',devotionals:'publish_date.desc',programmes:'start_at.desc',sermons:'preached_on.desc'};
 var ST={counselling_requests:['new','assigned','scheduled','closed'],testimonies:['pending','published','rejected'],contact_enquiries:['new','contacted','closed'],prayer_requests:['new','received','assigned','followed_up','closed'],members:['new_registration','contacted','active'],new_believer_requests:['new','contacted','followed_up','closed']};
 function isNew(r){return r.status==='new'||r.status==='new_registration'||r.status==='pending';}
 function loadAll(){Promise.all(T.map(function(t){if(t[0]==='team'||t[0]==='overview')return Promise.resolve();return rest(t[0]+'?select=*&order='+(OR[t[0]]||'created_at.desc')+'&limit=300').then(function(r){D[t[0]]=r||[];D[t[0]+'_err']='';}).catch(function(e){D[t[0]]=[];D[t[0]+'_err']=e.message;});})).then(render);}
@@ -65,7 +65,7 @@ var tabsEl=h('div',{}),listEl=h('div',{});
 function out(){S=null;save();showLogin();}
 function render(){if(!canSee(cur)){var v0=vis()[0];if(v0)cur=v0[0];}app.replaceChildren(
 h('div',{class:'card'},h('p',{class:'muted'},'Signed in as '+S.user.email+' ('+ME.roles.join(', ')+')'),h('button',{class:'btn alt',onclick:out},'Sign out'),h('button',{class:'btn alt',onclick:loadAll},'Refresh')),tabsEl,listEl);drawTabs();drawList();}
-var TV={prayer_requests:['pastoral_admin'],members:['pastoral_admin'],new_believer_requests:['pastoral_admin'],counselling_requests:['pastoral_admin'],contact_enquiries:['pastoral_admin','events_admin'],testimonies:['pastoral_admin','content_editor'],devotionals:['content_editor'],sermons:['content_editor'],programmes:['content_editor','events_admin'],gallery_items:['content_editor','events_admin'],team:[],overview:['pastoral_admin','content_editor','events_admin','finance_admin']};
+var TV={prayer_requests:['pastoral_admin'],members:['pastoral_admin'],new_believer_requests:['pastoral_admin'],counselling_requests:['pastoral_admin'],contact_enquiries:['pastoral_admin','events_admin'],testimonies:['pastoral_admin','content_editor'],devotionals:['content_editor'],sermons:['content_editor'],programmes:['content_editor','events_admin'],gallery_items:['content_editor','events_admin'],finance_records:['finance_admin'],team:[],overview:['pastoral_admin','content_editor','events_admin','finance_admin']};
 function canSee(k){var r=(ME&&ME.roles)||[];if(r.indexOf('super_admin')>-1)return true;return (TV[k]||[]).some(function(x){return r.indexOf(x)>-1;});}
 function vis(){return T.filter(function(t){return canSee(t[0]);});}
 var RL=[['super_admin','Super admin (everything)'],['pastoral_admin','Pastoral: prayer, members, new believers, counselling'],['content_editor','Content: devotionals, sermons, gallery, testimonies'],['events_admin','Events: programmes, gallery, enquiries'],['finance_admin','Finance (coming soon)']];
@@ -105,8 +105,55 @@ function pub(k){return (D[k]||[]).filter(function(r){return r.status==='publishe
 function drf(k){return (D[k]||[]).filter(function(r){return r.status==='draft';}).length;}
 if(canSee('devotionals'))parts.push(h('div',{class:'card',onclick:function(){ovGo('devotionals');}},h('h3',{},'Content'),h('p',{},pub('devotionals')+' devotionals published, '+drf('devotionals')+' drafts'),h('p',{},pub('programmes')+' programmes published, '+drf('programmes')+' drafts'),h('p',{},pub('sermons')+' sermons published, '+drf('sermons')+' drafts')));
 listEl.replaceChildren.apply(listEl,parts);}
+var FM=null;
+var FC={income:['Tithes','Offerings','Seed','Thanksgiving','Partnership','Donations','Other'],expense:['Rent','Utilities','Salaries','Media and equipment','Welfare','Transport','Missions','Other']};
+function fmt(n,c){return (c||'NGN')+' '+Number(n||0).toLocaleString('en-GB',{minimumFractionDigits:2,maximumFractionDigits:2});}
+function fmKey(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0');}
+function ldate(){var d=new Date(),p=function(n){return String(n).padStart(2,'0');};return d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate());}
+function finRow(r){
+var msg=h('span',{class:'muted'},'');
+var vb=h('button',{class:'btn alt',type:'button'},r.verified?'Verified (tap to undo)':'Mark verified');
+vb.addEventListener('click',function(){var nv=!r.verified;msg.textContent='Saving...';patch('finance_records',r.id,{verified:nv,verified_by:nv?S.user.id:null,updated_at:new Date().toISOString()}).then(function(){r.verified=nv;vb.textContent=nv?'Verified (tap to undo)':'Mark verified';msg.textContent='Saved';}).catch(function(e){msg.textContent='Could not save: '+e.message;});});
+return h('div',{class:'card'},h('p',{class:'nm'},(r.type==='income'?'+ ':'- ')+fmt(r.amount,r.currency)),h('p',{class:'muted'},[fd(r.entry_date,'date'),r.category,r.type].filter(Boolean).join(' - ')),r.description&&h('p',{},r.description),r.payment_ref&&h('p',{class:'muted'},'Ref: '+r.payment_ref),h('button',{class:'btn alt',onclick:function(){finEdit(r);}},'Edit'),vb,msg);}
+function drawFin(){
+if(!FM)FM=new Date(new Date().getFullYear(),new Date().getMonth(),1);
+var key=fmKey(FM);
+var rows=(D.finance_records||[]).filter(function(r){return String(r.entry_date||'').slice(0,7)===key;});
+var tot={};rows.forEach(function(r){var c=r.currency||'NGN';tot[c]=tot[c]||{i:0,e:0};if(r.type==='income')tot[c].i+=Number(r.amount);else tot[c].e+=Number(r.amount);});
+var label=FM.toLocaleString('en-GB',{month:'long',year:'numeric'});
+var parts=[
+h('div',{class:'card'},h('h2',{},'Finance'),h('p',{class:'muted'},'Only finance admins and super admins can see this page.'),
+h('button',{class:'btn',onclick:function(){finEdit(null);}},'Add entry'),
+h('div',{style:'margin-top:8px'},h('button',{class:'btn alt',onclick:function(){FM=new Date(FM.getFullYear(),FM.getMonth()-1,1);drawFin();}},'Previous month'),h('button',{class:'btn alt',onclick:function(){FM=new Date(FM.getFullYear(),FM.getMonth()+1,1);drawFin();}},'Next month'))),
+h('div',{class:'card'},h('h3',{},label),Object.keys(tot).length?Object.keys(tot).map(function(c){var t=tot[c];return h('div',{},h('p',{},'Income: '+fmt(t.i,c)),h('p',{},'Expenses: '+fmt(t.e,c)),h('p',{class:'nm'},'Balance: '+fmt(t.i-t.e,c)));}):h('p',{class:'muted'},'No entries this month.'))
+];
+if(D.finance_records_err)parts.push(h('p',{class:'err'},D.finance_records_err));
+rows.forEach(function(r){parts.push(finRow(r));});
+listEl.replaceChildren.apply(listEl,parts);}
+function finEdit(r){
+var ty=h('select',{class:'in'},['income','expense'].map(function(x){return h('option',{value:x},x);}));ty.value=r?r.type:'income';
+var dd=h('input',{type:'date',class:'in'});dd.value=r?String(r.entry_date).slice(0,10):ldate();
+var cat=h('select',{class:'in'});
+function fillCat(){var o=FC[ty.value].slice();if(r&&r.category&&o.indexOf(r.category)<0)o.push(r.category);cat.replaceChildren.apply(cat,o.map(function(x){return h('option',{value:x},x);}));cat.value=(r&&r.category&&o.indexOf(r.category)>-1)?r.category:o[0];}
+ty.addEventListener('change',fillCat);fillCat();
+var am=h('input',{type:'number',step:'0.01',min:'0',class:'in',placeholder:'0.00'});am.value=r?r.amount:'';
+var cu=h('select',{class:'in'},['NGN','USD','GBP','EUR'].map(function(x){return h('option',{value:x},x);}));cu.value=(r&&r.currency)||'NGN';
+var ds=h('input',{type:'text',class:'in',placeholder:'What is this for?'});ds.value=r?(r.description||''):'';
+var pr2=h('input',{type:'text',class:'in',placeholder:'Receipt, transfer or cheque number (optional)'});pr2.value=r?(r.payment_ref||''):'';
+var vf=h('input',{type:'checkbox'});vf.checked=!!(r&&r.verified);
+var msg=h('p',{class:'err'});
+var sb=h('button',{class:'btn',type:'button'},'Save');
+sb.addEventListener('click',function(){msg.textContent='';
+var a=Number(am.value);if(!(a>0)){msg.textContent='Please enter an amount greater than zero.';return;}
+if(!dd.value){msg.textContent='Please choose the date.';return;}
+var b={type:ty.value,entry_date:dd.value,category:cat.value,amount:a,currency:cu.value,description:ds.value.trim()||null,payment_ref:pr2.value.trim()||null,verified:vf.checked,verified_by:vf.checked?S.user.id:null};
+sb.disabled=true;sb.textContent='Saving...';
+var go=r?patch('finance_records',r.id,Object.assign(b,{updated_at:new Date().toISOString()})):rest('finance_records',{method:'POST',headers:{Prefer:'return=minimal'},body:JSON.stringify(Object.assign(b,{created_by:S.user.id}))});
+go.then(function(){loadAll();}).catch(function(e){sb.disabled=false;sb.textContent='Save';msg.textContent='Could not save: '+e.message;});});
+app.replaceChildren(h('button',{class:'btn alt',onclick:render},'Back'),h('div',{class:'card'},h('h2',{},r?'Edit entry':'Add entry'),
+h('label',{class:'fl'},'Type',ty),h('label',{class:'fl'},'Date',dd),h('label',{class:'fl'},'Category',cat),h('label',{class:'fl'},'Amount',am),h('label',{class:'fl'},'Currency',cu),h('label',{class:'fl'},'Description',ds),h('label',{class:'fl'},'Reference',pr2),h('label',{class:'ck'},vf,'This entry has been checked and verified'),msg,sb));}
 function drawTabs(){tabsEl.replaceChildren(h('div',{style:'display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px'},vis().map(function(t){var n=(D[t[0]]||[]).filter(isNew).length;return h('button',{class:'btn'+(t[0]===cur?'':' alt'),onclick:function(){cur=t[0];flt='all';drawTabs();drawList();}},t[1]+(n?' ('+n+' new)':''));})));}
-function drawList(){if(cur==='overview'){drawOverview();return;}if(cur==='team'){drawTeam();return;}if(cur==='testimonies'){drawTest();return;}if(CT.indexOf(cur)>-1){drawContent();return;}var rows=D[cur]||[];var all=ST[cur].slice();rows.forEach(function(r){if(r.status&&all.indexOf(r.status)<0)all.push(r.status);});
+function drawList(){if(cur==='finance_records'){drawFin();return;}if(cur==='overview'){drawOverview();return;}if(cur==='team'){drawTeam();return;}if(cur==='testimonies'){drawTest();return;}if(CT.indexOf(cur)>-1){drawContent();return;}var rows=D[cur]||[];var all=ST[cur].slice();rows.forEach(function(r){if(r.status&&all.indexOf(r.status)<0)all.push(r.status);});
 var f=h('select',{class:'in'},[h('option',{value:'all'},'All statuses')].concat(all.map(function(s){return h('option',{value:s},s.replace(/_/g,' '));})));
 f.value=flt;f.addEventListener('change',function(){flt=f.value;drawList();});
 var shown=rows.filter(function(r){return flt==='all'||r.status===flt;});
