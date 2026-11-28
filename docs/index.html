@@ -139,7 +139,8 @@ c('Pastoral counselling','Speak with a pastor in confidence.','coun'),
 c('Become a member','Join the TSC family.','join'),
 c('I am new here','New believer or first-time guest? Let us walk with you.','nb'),
 c('Contact and invitations','Invite Apostle to speak, or send us a message.','ctc'),
-c('About TSC','Our vision, mission and meetings.','about'));}
+c('About TSC','Our vision, mission and meetings.','about'),
+h('div',{class:'card',onclick:function(){location.href='privacy.html';}},h('h3',{},'Privacy policy'),h('p',{class:'muted'},'How we protect your information.')));}
 function fPray(){
 formPage('Prayer request','Share your need and our prayer team will stand with you. Prayer from TSC is free.',
 [fld('Your name',inp('pn','text','Name or Anonymous')),
