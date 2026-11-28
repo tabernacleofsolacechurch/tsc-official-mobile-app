@@ -159,6 +159,16 @@ var go=r?patch('finance_records',r.id,Object.assign(b,{updated_at:new Date().toI
 go.then(function(){loadAll();}).catch(function(e){sb.disabled=false;sb.textContent='Save';msg.textContent='Could not save: '+e.message;});});
 app.replaceChildren(h('button',{class:'btn alt',onclick:render},'Back'),h('div',{class:'card'},h('h2',{},r?'Edit entry':'Add entry'),
 h('label',{class:'fl'},'Type',ty),h('label',{class:'fl'},'Date',dd),h('label',{class:'fl'},'Category',cat),h('label',{class:'fl'},'Amount',am),h('label',{class:'fl'},'Currency',cu),h('label',{class:'fl'},'Description',ds),h('label',{class:'fl'},'Reference',pr2),h('label',{class:'ck'},vf,'This entry has been checked and verified'),msg,sb));}
+function isSuper(){return !!(ME&&ME.roles&&ME.roles.indexOf('super_admin')>-1);}
+function delRow(tb,r,label,msg){
+if(!confirm('Delete this permanently?\n'+label+'\nThis cannot be undone.'))return;
+function note(t,err){if(msg)msg.textContent=t;else if(err)alert(t);}
+note('Deleting...');
+rest(tb+'?id=eq.'+encodeURIComponent(r.id),{method:'DELETE',headers:{Prefer:'return=representation'}}).then(function(res){
+if(!res||!res.length)throw new Error('You do not have permission to delete this.');
+D[tb]=(D[tb]||[]).filter(function(x){return x.id!==r.id;});drawTabs();drawList();
+}).catch(function(e){note('Could not delete: '+e.message,1);});}
+function delBtn(tb,r,label,msg){return isSuper()&&h('button',{class:'btn alt',type:'button',style:'color:#ff9a9a;border-color:#ff9a9a',onclick:function(){delRow(tb,r,label,msg);}},'Delete');}
 function drawTabs(){tabsEl.replaceChildren(h('div',{style:'display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px'},vis().map(function(t){var n=(D[t[0]]||[]).filter(isNew).length;return h('button',{class:'btn'+(t[0]===cur?'':' alt'),onclick:function(){cur=t[0];flt='all';drawTabs();drawList();}},t[1]+(n?' ('+n+' new)':''));})));}
 function drawList(){if(cur==='finance_records'){drawFin();return;}if(cur==='overview'){drawOverview();return;}if(cur==='team'){drawTeam();return;}if(cur==='testimonies'){drawTest();return;}if(CT.indexOf(cur)>-1){drawContent();return;}var rows=D[cur]||[];var all=ST[cur].slice();rows.forEach(function(r){if(r.status&&all.indexOf(r.status)<0)all.push(r.status);});
 var f=h('select',{class:'in'},[h('option',{value:'all'},'All statuses')].concat(all.map(function(s){return h('option',{value:s},s.replace(/_/g,' '));})));
@@ -190,7 +200,7 @@ h('p',{class:'muted'},r.created_at?new Date(r.created_at).toLocaleString('en-GB'
 body,
 h('div',{},n&&h('a',{class:'btn',href:'https://wa.me/'+n,target:'_blank',rel:'noopener'},'WhatsApp'),n&&h('a',{class:'btn alt',href:'tel:+'+n},'Call'),em&&h('a',{class:'btn alt',href:'mailto:'+em},'Email')),
 h('label',{class:'fl'},'Status',sel),msg,
-nt&&h('label',{class:'fl'},'Notes',nt),nb,nm);}
+nt&&h('label',{class:'fl'},'Notes',nt),nb,nm,delBtn(tb,r,name,msg));}
 function drawTest(){var rows=D.testimonies||[];
 var f=h('select',{class:'in'},[h('option',{value:'all'},'All')].concat(['pending','published','rejected'].map(function(x){return h('option',{value:x},x);})));
 f.value=flt;f.addEventListener('change',function(){flt=f.value;drawList();});
@@ -201,7 +211,7 @@ if(!shown.length)parts.push(h('p',{class:'muted'},'Nothing here yet.'));
 shown.forEach(function(r){var ta=h('textarea',{class:'in',rows:'6'});ta.value=r.published_text||r.testimony||'';
 var msg=h('span',{class:'muted'},'');
 function act(st){msg.textContent='Saving...';var o={status:st,reviewed_by:S.user.id};if(st==='published')o.published_text=ta.value.trim();patch('testimonies',r.id,o).then(function(){r.status=st;if(o.published_text)r.published_text=o.published_text;msg.textContent='Saved';drawTabs();}).catch(function(e){msg.textContent='Could not save: '+e.message;});}
-parts.push(h('div',{class:'card'},h('p',{class:'nm'},r.display_name||'Anonymous'),h('p',{class:'muted'},[r.attribution,r.status,r.created_at?fd(r.created_at):''].filter(Boolean).join(' - ')),h('p',{class:'muted'},'Original testimony:'),h('p',{style:'white-space:pre-wrap'},r.testimony||''),h('label',{class:'fl'},'Text to publish (you may edit it)',ta),h('button',{class:'btn',type:'button',onclick:function(){if(!ta.value.trim()){msg.textContent='Please add text to publish.';return;}act('published');}},'Publish'),h('button',{class:'btn alt',type:'button',onclick:function(){act('rejected');}},'Reject'),h('button',{class:'btn alt',type:'button',onclick:function(){act('pending');}},'Mark pending'),msg));});
+parts.push(h('div',{class:'card'},h('p',{class:'nm'},r.display_name||'Anonymous'),h('p',{class:'muted'},[r.attribution,r.status,r.created_at?fd(r.created_at):''].filter(Boolean).join(' - ')),h('p',{class:'muted'},'Original testimony:'),h('p',{style:'white-space:pre-wrap'},r.testimony||''),h('label',{class:'fl'},'Text to publish (you may edit it)',ta),h('button',{class:'btn',type:'button',onclick:function(){if(!ta.value.trim()){msg.textContent='Please add text to publish.';return;}act('published');}},'Publish'),h('button',{class:'btn alt',type:'button',onclick:function(){act('rejected');}},'Reject'),h('button',{class:'btn alt',type:'button',onclick:function(){act('pending');}},'Mark pending'),delBtn('testimonies',r,(r.display_name||'Anonymous')+' - testimony',msg),msg));});
 listEl.replaceChildren.apply(listEl,parts);}
 var CT=['devotionals','programmes','sermons','gallery_items'];
 var CS=['draft','published','archived'];
@@ -219,7 +229,7 @@ f.value=flt;f.addEventListener('change',function(){flt=f.value;drawList();});
 var shown=rows.filter(function(r){return flt==='all'||r.status===flt;});
 var parts=[h('button',{class:'btn',onclick:function(){edit(cur,null);}},'Add new '+c.one),f];
 if(D[cur+'_err'])parts.push(h('p',{class:'err'},D[cur+'_err']));
-if(shown.length){shown.forEach(function(r){parts.push(h('div',{class:'card'},h('p',{class:'nm'},r.title||r.caption||r.event_name||'(untitled)'),h('p',{class:'muted'},[fd(r[c.date],c.dt),r.status].filter(Boolean).join(' - ')),h('button',{class:'btn alt',onclick:function(){edit(cur,r);}},'Edit')));});}
+if(shown.length){shown.forEach(function(r){parts.push(h('div',{class:'card'},h('p',{class:'nm'},r.title||r.caption||r.event_name||'(untitled)'),h('p',{class:'muted'},[fd(r[c.date],c.dt),r.status].filter(Boolean).join(' - ')),h('button',{class:'btn alt',onclick:function(){edit(cur,r);}},'Edit'),delBtn(cur,r,r.title||r.caption||r.event_name||'(untitled)')));});}
 else parts.push(h('p',{class:'muted'},'Nothing here yet.'));
 listEl.replaceChildren.apply(listEl,parts);}
 function saveRow(tb,row,o){
